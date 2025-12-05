@@ -161,6 +161,107 @@
             box-shadow: 0 16px 50px rgba(255, 55, 95, 0.4);
         }
 
+        /* Nueva Sección: Buscar y Descargar Música */
+        .search-download {
+            padding: 80px 40px;
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+            background: var(--glass-bg);
+            backdrop-filter: blur(30px);
+            border-radius: 28px;
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow);
+            margin-bottom: 60px;
+        }
+
+        .search-download h2 {
+            font-size: 48px;
+            font-weight: 800;
+            margin-bottom: 30px;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .search-download p {
+            font-size: 20px;
+            opacity: 0.8;
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 300px;
+            padding: 18px 24px;
+            border: 1px solid var(--glass-border);
+            border-radius: 100px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            font-size: 18px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .search-input:focus {
+            border-color: #ff375f;
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 20px rgba(255, 55, 95, 0.3);
+        }
+
+        .download-button {
+            padding: 18px 30px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 100px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 8px 30px rgba(255, 55, 95, 0.3);
+        }
+
+        .download-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(255, 55, 95, 0.4);
+        }
+
+        .download-button:active {
+            transform: translateY(0);
+        }
+
+        .results {
+            margin-top: 20px;
+            text-align: left;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .result-item {
+            padding: 10px;
+            border-bottom: 1px solid var(--glass-border);
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .result-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
         /* Features */
         .features {
             padding: 100px 40px;
@@ -325,6 +426,23 @@
                 font-size: 20px;
             }
             
+            .search-download {
+                padding: 60px 24px;
+            }
+            
+            .search-download h2 {
+                font-size: 36px;
+            }
+            
+            .search-container {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .search-input {
+                min-width: 250px;
+            }
+            
             .features, .preview-tracks {
                 padding: 60px 24px;
             }
@@ -357,6 +475,16 @@
             <span>Explorar Biblioteca</span>
             <span>→</span>
         </a>
+    </section>
+
+    <section class="search-download">
+        <h2>Buscar y Descargar Música</h2>
+        <p>Busca en YouTube y descarga MP3 gratis (usando API de terceros; verifica seguridad).</p>
+        <div class="search-container">
+            <input type="text" id="searchInput" class="search-input" placeholder="Buscar canción, artista o álbum...">
+            <button id="searchBtn" class="download-button">Buscar</button>
+        </div>
+        <div id="results" class="results"></div>
     </section>
 
     <section class="preview-tracks" id="previewTracks">
@@ -414,73 +542,3 @@
                 showEmptyPreview();
             }
         }
-
-        function openDatabase() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open('MusicProDB', 1);
-                
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
-            });
-        }
-
-        function getAllTracks(db) {
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction(['music'], 'readonly');
-                const store = transaction.objectStore('music');
-                const request = store.getAll();
-                
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
-            });
-        }
-
-        function renderPreviewTracks(tracks) {
-            const container = document.getElementById('tracksContainer');
-            container.innerHTML = '';
-            
-            tracks.forEach(track => {
-                const firstChar = track.title ? track.title.charAt(0).toUpperCase() : '🎵';
-                
-                const card = document.createElement('div');
-                card.className = 'track-card';
-                card.innerHTML = `
-                    <div class="track-art">${firstChar}</div>
-                    <div class="track-info">
-                        <div class="track-title">${track.title || 'Sin título'}</div>
-                        <div class="track-artist">${track.artist || 'Artista desconocido'}</div>
-                    </div>
-                `;
-                
-                card.addEventListener('click', () => {
-                    localStorage.setItem('currentTrackId', track.id);
-                    window.location.href = 'reproductor.html';
-                });
-                
-                container.appendChild(card);
-            });
-        }
-
-        function showEmptyPreview() {
-            const section = document.getElementById('previewTracks');
-            section.innerHTML = `
-                <h2>Escuchar Ahora</h2>
-                <div style="text-align: center; padding: 60px 20px;">
-                    <div style="font-size: 72px; margin-bottom: 30px; opacity: 0.3;">🎵</div>
-                    <div style="font-size: 24px; margin-bottom: 20px;">Tu biblioteca está vacía</div>
-                    <div style="opacity: 0.7; margin-bottom: 40px; max-width: 400px; margin-left: auto; margin-right: auto;">
-                        Agrega tu música para comenzar a disfrutar
-                    </div>
-                    <a href="biblioteca.html" class="cta-button" style="display: inline-flex;">
-                        <span>Ir a Biblioteca</span>
-                        <span>→</span>
-                    </a>
-                </div>
-            `;
-        }
-
-        // Inicializar
-        window.addEventListener('DOMContentLoaded', loadPreviewTracks);
-    </script>
-</body>
-</html>
