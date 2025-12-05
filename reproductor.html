@@ -106,7 +106,7 @@
     function showToast(m){ console.log(m); }
 
     // open DB
-    function openDB(){ return new Promise((res,rej)=>{ const r=indexedDB.open('MusicProDB',3); r.onupgradeneeded=(e)=>{ const idb=e.target.result; if(!idb.objectStoreNames.contains('music')){ const s=idb.createObjectStore('music',{keyPath:'id',autoIncrement:true}); s.createIndex('title','title',{unique:false}); } if(!idb.objectStoreNames.contains('meta')) idb.createObjectStore('meta',{keyPath:'key'}); }; r.onsuccess=(e)=>{ db=e.target.result; res(db); }; r.onerror=(e)=>rej(e.target.error); }); }
+    function openDB(){ return new Promise((res,rej)=>{ const r=indexedDB.open('MusicProDB',4); r.onupgradeneeded=(e)=>{ const idb=e.target.result; if(!idb.objectStoreNames.contains('music')){ const s=idb.createObjectStore('music',{keyPath:'id',autoIncrement:true}); s.createIndex('title','title',{unique:false}); } if(!idb.objectStoreNames.contains('meta')) idb.createObjectStore('meta',{keyPath:'key'}); }; r.onsuccess=(e)=>{ db=e.target.result; res(db); }; r.onerror=(e)=>rej(e.target.error); }); }
 
     function metaGet(key){ return new Promise((res,rej)=>{ const tx=db.transaction('meta','readonly'); const s=tx.objectStore('meta'); const rq=s.get(key); rq.onsuccess=()=>res(rq.result?rq.result.value:undefined); rq.onerror=(e)=>rej(e.target.error); }); }
     function metaPut(key,val){ return new Promise((res,rej)=>{ const tx=db.transaction('meta','readwrite'); const s=tx.objectStore('meta'); const rq=s.put({key,value:val}); rq.onsuccess=()=>res(); rq.onerror=(e)=>rej(e.target.error); }); }
