@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reproductor Vidrio Transparente - Música Pro</title>
+    <title>Reproductor Ultra Moderno - Música Pro</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -15,6 +15,10 @@
             min-height: 100vh;
             overflow-x: hidden;
             animation: liquidGlass 20s ease-in-out infinite;
+        }
+        body.light-mode {
+            background: #f5f5f7;
+            color: #000;
         }
         @keyframes liquidGlass {
             0% { background-position: 0% 50%; filter: hue-rotate(0deg) brightness(1); }
@@ -35,6 +39,10 @@
             z-index: 100;
             border-radius: 0 0 30px 30px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+        body.light-mode nav {
+            background: rgba(255, 255, 255, 0.9);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
         }
         nav .logo {
             font-size: 2em;
@@ -61,6 +69,11 @@
             position: relative;
             overflow: hidden;
         }
+        body.light-mode nav a {
+            color: #333;
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
         nav a::before {
             content: '';
             position: absolute;
@@ -80,6 +93,9 @@
             transform: scale(1.05);
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
         }
+        body.light-mode nav a:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
         #theme-toggle {
             background: rgba(255, 255, 255, 0.05);
             border: none;
@@ -92,6 +108,11 @@
             backdrop-filter: blur(30px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             position: relative;
+        }
+        body.light-mode #theme-toggle {
+            background: rgba(0, 0, 0, 0.05);
+            color: #000;
+            border: 1px solid rgba(0, 0, 0, 0.1);
         }
         #theme-toggle::before {
             content: '';
@@ -109,6 +130,9 @@
             background: rgba(255, 255, 255, 0.15);
             transform: scale(1.1) rotate(10deg);
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        }
+        body.light-mode #theme-toggle:hover {
+            background: rgba(0, 0, 0, 0.15);
         }
         @keyframes glassRipple {
             0% { transform: scale(1); opacity: 0.5; }
@@ -170,6 +194,10 @@
             box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
+        body.light-mode .track-info {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
         .track-info .title {
             font-size: 2.5em;
             font-weight: 700;
@@ -178,6 +206,9 @@
         .track-info .artist {
             color: #b3b3b3;
             font-size: 1.2em;
+        }
+        body.light-mode .track-info .artist {
+            color: #666;
         }
         .progress-bar {
             width: 100%;
@@ -190,6 +221,10 @@
             overflow: hidden;
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        body.light-mode .progress-bar {
+            background: rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.05);
         }
         .progress-fill {
             height: 100%;
@@ -215,6 +250,10 @@
             box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
+        body.light-mode .controls {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
         .controls button {
             background: rgba(255, 255, 255, 0.05);
             border: none;
@@ -228,6 +267,11 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             position: relative;
             overflow: hidden;
+        }
+        body.light-mode .controls button {
+            background: rgba(0, 0, 0, 0.05);
+            color: #000;
+            border: 1px solid rgba(0, 0, 0, 0.1);
         }
         .controls button::before {
             content: '';
@@ -246,6 +290,9 @@
             transform: scale(1.15) rotate(5deg);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
         }
+        body.light-mode .controls button:hover {
+            background: rgba(0, 0, 0, 0.15);
+        }
         .volume-slider {
             width: 200px;
             -webkit-appearance: none;
@@ -253,6 +300,9 @@
             height: 6px;
             border-radius: 3px;
             backdrop-filter: blur(20px);
+        }
+        body.light-mode .volume-slider {
+            background: rgba(0, 0, 0, 0.1);
         }
         .volume-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
@@ -273,6 +323,10 @@
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
+        body.light-mode .wave-visualizer {
+            background: rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
         .wave-visualizer canvas {
             width: 100%;
             height: 100%;
@@ -289,6 +343,10 @@
             box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
+        body.light-mode .queue {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
         .queue-item {
             display: flex;
             align-items: center;
@@ -298,9 +356,15 @@
             transition: all 0.3s;
             border-radius: 15px;
         }
+        body.light-mode .queue-item {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
         .queue-item:hover {
             background: rgba(255, 255, 255, 0.1);
             transform: translateX(10px);
+        }
+        body.light-mode .queue-item:hover {
+            background: rgba(0, 0, 0, 0.1);
         }
         .queue-item img {
             width: 50px;
@@ -353,6 +417,7 @@
             <a href="index.html">Inicio</a>
             <a href="files.html">Biblioteca</a>
             <a href="#player" class="active">Reproductor</a>
+            <a href="links.html">Descargas</a>
             <button id="theme-toggle">🌙</button>
         </div>
     </nav>
@@ -367,59 +432,4 @@
             <div class="progress-fill" id="progress-fill"></div>
         </div>
         <div class="controls">
-            <button id="shuffle-btn">🔀</button>
-            <button id="prev-btn">⏮</button>
-            <button id="play-pause-btn">▶</button>
-            <button id="next-btn">⏭</button>
-            <button id="repeat-btn">🔁</button>
-            <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.1" value="0.5">
-        </div>
-        <div class="wave-visualizer">
-            <canvas id="wave-canvas"></canvas>
-        </div>
-        <div class="queue">
-            <h3>Cola de reproducción</h3>
-            <div id="queue-list"></div>
-        </div>
-    </div>
-
-    <div class="toast" id="toast">Acción completada</div>
-
-    <script>
-        let audioContext, analyser, dataArray, source;
-        const audio = new Audio();
-        const canvas = document.getElementById('wave-canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = canvas.offsetWidth;
-        canvas.height = canvas.offsetHeight;
-        let tracks = [];
-        let currentTrackIndex = -1;
-        let isShuffled = false;
-        let isRepeating = false;
-
-        const dbPromise = indexedDB.open('MusicDB', 1);
-        dbPromise.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains('tracks')) {
-                db.createObjectStore('tracks', { keyPath: 'id', autoIncrement: true });
-            }
-        };
-
-        function loadTracks() {
-            dbPromise.then(db => {
-                const tx = db.transaction('tracks', 'readonly');
-                const store = tx.objectStore('tracks');
-                store.getAll().then(results => {
-                    tracks = results;
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const trackId = urlParams.get('track');
-                    if (trackId) {
-                        const index = tracks.findIndex(t => t.id == trackId);
-                        if (index >= 0) playTrack(index);
-                    }
-                    renderQueue();
-                });
-            });
-        }
-
-        function play
+            <button id="shuffle-btn">🔀</
