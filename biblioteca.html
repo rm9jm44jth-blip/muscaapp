@@ -384,553 +384,482 @@
 
     <!-- SCRIPTS (MEJORADOS) -->
     <script>
-        /*
-         * Música Pro - Biblioteca (JS modernizado)
-         * - Guarda archivos en carpeta local mediante File System Access API si está disponible
-         * - Fallback a IndexedDB si no hay soporte
-         * - Usa object URLs para reproducir localmente sin re-cargar desde la red
-         * - Mejora handling de drag & drop y evita errores al inicializar
-         */
+/*
+ * Música Pro - Biblioteca (JS robusto y garantizado local-first)
+ * - Siempre local: obliga a usar archivos locales (carpeta seleccionada o IDB)
+ * - Mini-cuenta local (token UUID) guardada en IndexedDB/meta
+ * - Detección automática de carpeta si hay permisos
+ * - Escaneo fiable de carpeta (File System Access API) y fallback a IDB
+ * - Si no hay nada, la app insiste en elegir carpeta o agregar archivos
+ */
 
-        let db = null;
-        let currentTracks = [];
-        let directoryHandle = null; // FileSystemDirectoryHandle si el navegador lo permite
+let db = null;
+let currentTracks = [];
+let directoryHandle = null; // FileSystemDirectoryHandle
 
-        // ---------- IndexedDB ----------
-        function openDB() {
-            return new Promise((resolve, reject) => {
-                try {
-                    const req = indexedDB.open('MusicProDB', 2);
+// ---------- Helpers ----------
+function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
 
-                    req.onupgradeneeded = (e) => {
-                        const idb = e.target.result;
-                        if (!idb.objectStoreNames.contains('music')) {
-                            const store = idb.createObjectStore('music', { keyPath: 'id', autoIncrement: true });
-                            store.createIndex('title', 'title', { unique: false });
-                            store.createIndex('artist', 'artist', { unique: false });
-                        }
-                        if (!idb.objectStoreNames.contains('meta')) {
-                            idb.createObjectStore('meta', { keyPath: 'key' });
-                        }
-                    };
+function escapeHtml(text) {
+  return String(text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
-                    req.onsuccess = (e) => {
-                        db = e.target.result;
-                        resolve(db);
-                    };
+function showToast(msg, t = 3000) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.style.display = 'none', t);
+}
 
-                    req.onerror = (e) => reject(e.target.error);
-                } catch (err) {
-                    reject(err);
-                }
-            });
+// ---------- IndexedDB: open and meta helpers ----------
+function openDB() {
+  return new Promise((resolve, reject) => {
+    try {
+      const req = indexedDB.open('MusicProDB', 3);
+      req.onupgradeneeded = (e) => {
+        const idb = e.target.result;
+        if (!idb.objectStoreNames.contains('music')) {
+          const store = idb.createObjectStore('music', { keyPath: 'id', autoIncrement: true });
+          store.createIndex('title', 'title', { unique: false });
         }
-
-        async function saveMeta(key, value) {
-            if (!db) await openDB();
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(['meta'], 'readwrite');
-                const store = tx.objectStore('meta');
-                const req = store.put({ key, value });
-                req.onsuccess = () => resolve();
-                req.onerror = (e) => reject(e.target.error);
-            });
+        if (!idb.objectStoreNames.contains('meta')) {
+          idb.createObjectStore('meta', { keyPath: 'key' });
         }
+      };
+      req.onsuccess = (e) => { db = e.target.result; resolve(db); };
+      req.onerror = (e) => reject(e.target.error);
+    } catch (err) { reject(err); }
+  });
+}
 
-        async function getMeta(key) {
-            if (!db) await openDB();
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(['meta'], 'readonly');
-                const store = tx.objectStore('meta');
-                const req = store.get(key);
-                req.onsuccess = () => resolve(req.result ? req.result.value : undefined);
-                req.onerror = (e) => reject(e.target.error);
-            });
+function metaPut(key, value) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(['meta'], 'readwrite');
+    const store = tx.objectStore('meta');
+    const req = store.put({ key, value });
+    req.onsuccess = () => res();
+    req.onerror = (e) => rej(e.target.error);
+  });
+}
+
+function metaGet(key) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(['meta'], 'readonly');
+    const store = tx.objectStore('meta');
+    const req = store.get(key);
+    req.onsuccess = () => res(req.result ? req.result.value : undefined);
+    req.onerror = (e) => rej(e.target.error);
+  });
+}
+
+// Blob storage in meta (fallback)
+function saveBlobInMeta(blob) {
+  return new Promise((res, rej) => {
+    const key = `blob:${Date.now()}:${Math.random().toString(36).slice(2,8)}`;
+    const tx = db.transaction(['meta'], 'readwrite');
+    const store = tx.objectStore('meta');
+    const req = store.put({ key, value: blob });
+    req.onsuccess = () => res(key);
+    req.onerror = (e) => rej(e.target.error);
+  });
+}
+
+function readBlobFromMeta(key) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(['meta'], 'readonly');
+    const store = tx.objectStore('meta');
+    const req = store.get(key);
+    req.onsuccess = () => res(req.result ? req.result.value : null);
+    req.onerror = (e) => rej(e.target.error);
+  });
+}
+
+// ---------- File System Access: request directory and scan ----------
+async function requestDirectoryAccess(force = false) {
+  if (!('showDirectoryPicker' in window)) return false;
+  try {
+    // if already have saved handle, try to restore
+    if (!force) {
+      const saved = await metaGet('directoryHandle');
+      if (saved) {
+        try {
+          directoryHandle = saved;
+          // test permission
+          const perm = await directoryHandle.requestPermission({ mode: 'readwrite' });
+          if (perm === 'granted') return true;
+        } catch (err) {
+          directoryHandle = null; // continuará a pedir de nuevo
         }
+      }
+    }
 
-        // ---------- Directory (File System Access API) ----------
-        async function requestDirectoryAccess() {
-            if (!('showDirectoryPicker' in window)) return false;
-            try {
-                // Si ya tenemos handle en memoria, pedir permiso
-                const saved = await getMeta('directoryHandle');
-                if (saved) {
-                    try {
-                        // structured clone preserves handles in compatible browsers
-                        directoryHandle = saved;
-                        // pedir permiso de lectura/escritura
-                        const perm = await directoryHandle.requestPermission({ mode: 'readwrite' });
-                        if (perm === 'granted') return true;
-                    } catch (err) {
-                        // continúa para pedir nuevo handle
-                        directoryHandle = null;
-                    }
-                }
+    directoryHandle = await window.showDirectoryPicker();
+    const permission = await directoryHandle.requestPermission({ mode: 'readwrite' });
+    if (permission === 'granted') {
+      try { await metaPut('directoryHandle', directoryHandle); } catch (e) { console.warn('No se pudo guardar handle'); }
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.warn('requestDirectoryAccess error', err);
+    return false;
+  }
+}
 
-                directoryHandle = await window.showDirectoryPicker({ id: 'musicpro-library' });
-                // pedir permiso
-                const permission = await directoryHandle.requestPermission({ mode: 'readwrite' });
-                if (permission === 'granted') {
-                    // guardar handle en indexedDB para uso futuro (si el navegador lo permite)
-                    try { await saveMeta('directoryHandle', directoryHandle); } catch (e) { /* no crítico */ }
-                    return true;
-                }
-                return false;
-            } catch (err) {
-                console.warn('No se pudo acceder al directorio:', err);
-                return false;
-            }
+async function scanDirectoryForAudio(handle) {
+  const tracks = [];
+  // Recorrer directorio (no recursivo profundo para simplicidad; recursivo opcional)
+  for await (const entry of handle.values()) {
+    try {
+      if (entry.kind === 'file') {
+        const name = entry.name;
+        if (/\.(mp3|wav|ogg|m4a|flac|aac)$/i.test(name)) {
+          const file = await entry.getFile();
+          const duration = await getAudioDuration(file);
+          const parts = name.replace(/\.[^/.]+$/, '').split(' - ');
+          let artist = 'Artista desconocido', title = parts.join(' - ');
+          if (parts.length >= 2) { artist = parts[0].trim(); title = parts.slice(1).join(' - ').trim(); }
+          tracks.push({
+            title, artist, fileName: name, fileSize: file.size, fileType: file.type || 'audio/*',
+            duration: Math.floor(duration)||0, dateAdded: new Date().toISOString(), storage: 'fs', fileHandleName: name
+          });
         }
+      }
+    } catch (err) { console.warn('scan entry error', err); }
+  }
+  return tracks;
+}
 
-        // Guarda archivo físico en la carpeta seleccionada y devuelve un File usable para reproducir
-        async function saveFileToDirectory(file) {
-            if (!directoryHandle) throw new Error('No directory handle');
-            const name = file.name;
-            const fh = await directoryHandle.getFileHandle(name, { create: true });
-            const writable = await fh.createWritable();
-            await writable.write(file);
-            await writable.close();
-            const savedFile = await fh.getFile();
-            return savedFile;
+// ---------- Music store operations ----------
+function addTrackToDB(track) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(['music'], 'readwrite');
+    const store = tx.objectStore('music');
+    const req = store.add(track);
+    req.onsuccess = () => res(req.result);
+    req.onerror = (e) => rej(e.target.error);
+  });
+}
+
+function getAllTracksFromDB() {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(['music'], 'readonly');
+    const store = tx.objectStore('music');
+    const req = store.getAll();
+    req.onsuccess = () => res(req.result || []);
+    req.onerror = (e) => rej(e.target.error);
+  });
+}
+
+async function clearAndPopulateFromDirectory() {
+  // Limpia DB y vuelve a poblar desde directorio para garantizar que siempre refleje la carpeta local
+  try {
+    const tx = db.transaction(['music'], 'readwrite');
+    const store = tx.objectStore('music');
+    // eliminar todo (simple y eficiente)
+    store.clear();
+    await new Promise(r => tx.oncomplete = r);
+
+    const scanned = await scanDirectoryForAudio(directoryHandle);
+    for (const s of scanned) {
+      await addTrackToDB(s);
+    }
+    return scanned;
+  } catch (err) { console.error(err); return [];} 
+}
+
+// ---------- Audio helpers ----------
+function getAudioDuration(file) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const audio = new Audio();
+    audio.src = url;
+    audio.addEventListener('loadedmetadata', () => { resolve(audio.duration || 0); URL.revokeObjectURL(url); });
+    audio.addEventListener('error', () => { resolve(0); URL.revokeObjectURL(url); });
+  });
+}
+
+function dataURLtoBlob(dataurl) {
+  const arr = dataurl.split(',');
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length; const u8 = new Uint8Array(n);
+  while (n--) u8[n] = bstr.charCodeAt(n);
+  return new Blob([u8], { type: mime });
+}
+
+// ---------- Play / export / delete ----------
+async function playTrack(track) {
+  try {
+    let blob = null;
+    if (track.storage === 'fs' && directoryHandle) {
+      try {
+        const fh = await directoryHandle.getFileHandle(track.fileHandleName);
+        blob = await fh.getFile();
+      } catch (err) { console.warn('No se pudo leer desde FS', err); }
+    }
+    if (!blob && track.blobKey) blob = await readBlobFromMeta(track.blobKey);
+    if (!blob && track.url) blob = dataURLtoBlob(track.url);
+    if (!blob) return showToast('No disponible localmente');
+
+    const url = URL.createObjectURL(blob);
+    localStorage.setItem('currentTrackBlobUrl', url);
+    localStorage.setItem('currentTrack', JSON.stringify(track));
+    window.location.href = 'reproductor.html';
+  } catch (err) { console.error(err); showToast('Error reproduciendo'); }
+}
+
+async function exportTrack(id) {
+  const all = await getAllTracksFromDB();
+  const t = all.find(x => Number(x.id) === Number(id));
+  if (!t) return showToast('No encontrado');
+  let blob = null;
+  if (t.storage === 'fs' && directoryHandle) {
+    try { const fh = await directoryHandle.getFileHandle(t.fileHandleName); blob = await fh.getFile(); } catch(e){console.warn(e);} }
+  if (!blob && t.blobKey) blob = await readBlobFromMeta(t.blobKey);
+  if (!blob) return showToast('No se puede exportar');
+
+  try {
+    if ('showSaveFilePicker' in window) {
+      const handle = await window.showSaveFilePicker({ suggestedName: t.fileName });
+      const w = await handle.createWritable(); await w.write(blob); await w.close();
+      showToast('Guardado correctamente');
+      return;
+    }
+  } catch (err) { console.warn(err); }
+
+  // fallback descarga
+  const a = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  a.href = url; a.download = t.fileName; document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  showToast('Descarga iniciada');
+}
+
+async function removeTrack(id) {
+  const tx = db.transaction(['music'], 'readwrite');
+  const store = tx.objectStore('music');
+  store.delete(Number(id));
+  await new Promise(r => tx.oncomplete = r);
+  await loadMusic();
+  closeModal();
+  showToast('Eliminado');
+}
+
+// ---------- File input & drop handlers ----------
+const fileInput = document.getElementById('fileInput');
+fileInput.addEventListener('change', async (e) => { await importFiles(Array.from(e.target.files)); fileInput.value = ''; });
+document.getElementById('uploadArea').addEventListener('click', () => fileInput.click());
+
+async function importFiles(files) {
+  if (!files || files.length === 0) return;
+  const audioFiles = files.filter(f => f.type && f.type.startsWith('audio/'));
+  if (audioFiles.length === 0) return showToast('No hay archivos de audio');
+
+  // intentar guardar en carpeta si existe
+  let haveDir = !!directoryHandle;
+  if (!haveDir && 'showDirectoryPicker' in window) {
+    const r = confirm('¿Deseas seleccionar una carpeta para guardar automáticamente tus archivos? (Recomendado)');
+    if (r) haveDir = await requestDirectoryAccess();
+  }
+
+  let processed = 0;
+  for (const file of audioFiles) {
+    try {
+      const dur = await getAudioDuration(file);
+      const nameNoExt = file.name.replace(/\.[^/.]+$/, '');
+      const parts = nameNoExt.split(' - ');
+      let artist = 'Artista desconocido', title = nameNoExt;
+      if (parts.length>=2) { artist=parts[0].trim(); title=parts.slice(1).join(' - ').trim(); }
+
+      let storage = 'idb', blobKey = null, fileHandleName = null;
+      if (haveDir && directoryHandle) {
+        try {
+          const fh = await directoryHandle.getFileHandle(file.name, { create: true });
+          const w = await fh.createWritable(); await w.write(file); await w.close();
+          storage = 'fs'; fileHandleName = file.name;
+        } catch (err) { console.warn('Guardar en carpeta falló', err); storage='idb'; }
+      }
+
+      if (storage === 'idb') blobKey = await saveBlobInMeta(file);
+
+      const track = { title, artist, fileName: file.name, fileSize: file.size, fileType: file.type, duration: Math.floor(dur)||0, dateAdded: new Date().toISOString(), storage, blobKey, fileHandleName };
+      await addTrackToDB(track);
+      processed++; showToast(`Procesado ${processed}/${audioFiles.length}`);
+    } catch (err) { console.error(err); showToast('Error importando'); }
+  }
+
+  await loadMusic();
+  showToast(`${processed} canción(es) agregadas`);
+}
+
+// Drag & drop
+function preventDefault(e){ e.preventDefault(); e.stopPropagation(); }
+['dragenter','dragover','dragleave','drop'].forEach(evt => { document.addEventListener(evt, preventDefault, false); });
+const uploader = document.getElementById('uploadArea');
+uploader.addEventListener('dragover', () => uploader.classList.add('dragover'));
+uploader.addEventListener('dragleave', () => uploader.classList.remove('dragover'));
+uploader.addEventListener('drop', async (e) => { uploader.classList.remove('dragover'); await importFiles(Array.from(e.dataTransfer.files)); });
+
+// ---------- Render UI ----------
+function renderMusicGrid(tracks) {
+  currentTracks = tracks;
+  const grid = document.getElementById('musicGrid');
+  if (!tracks || tracks.length===0) {
+    grid.innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:80px 20px;opacity:0.9;">
+        <div style="font-size:72px;opacity:0.25;margin-bottom:20px;">🎵</div>
+        <div style="font-size:22px;margin-bottom:10px;">Tu biblioteca está vacía</div>
+        <div style="opacity:0.7;margin-bottom:20px;max-width:560px;margin-left:auto;margin-right:auto;">Selecciona una carpeta local o agrega archivos para que la app funcione. La app sólo funciona con archivos locales.</div>
+        <div style="display:flex;gap:12px;justify-content:center;margin-top:18px;">
+          <button class="control-btn primary" onclick="document.getElementById('fileInput').click()">➕ Agregar Música</button>
+          <button class="control-btn" onclick="requestDirectoryAccess(true)">📁 Seleccionar Carpeta</button>
+        </div>
+      </div>
+    `; return;
+  }
+
+  grid.innerHTML = '';
+  for (const track of tracks) {
+    const item = document.createElement('div'); item.className='music-item'; item.dataset.id = track.id;
+    const first = track.title ? track.title.charAt(0).toUpperCase() : '♫';
+    item.innerHTML = `
+      <div class="album-art"><div>${first}</div><div class="play-overlay">▶</div></div>
+      <div class="music-info"><div class="music-title">${escapeHtml(track.title||'Sin título')}</div><div class="music-artist">${escapeHtml(track.artist||'Artista desconocido')}</div></div>
+    `;
+    item.addEventListener('click', (e)=>{ if (e.target.closest('.play-overlay')) playTrack(track); else showTrackDetails(track); });
+    item.addEventListener('dblclick', ()=>playTrack(track));
+    grid.appendChild(item);
+  }
+}
+
+function updateStats(tracks) {
+  document.getElementById('totalSongs').textContent = `${tracks.length} canciones`;
+  const artists = new Set(tracks.map(t=>t.artist).filter(Boolean));
+  document.getElementById('totalArtists').textContent = `${artists.size} artistas`;
+  const totalDuration = tracks.reduce((s,t)=>s+(t.duration||0),0);
+  document.getElementById('totalDuration').textContent = `${Math.floor(totalDuration/60)} min`;
+}
+
+// ---------- Modal ----------
+function showTrackDetails(track) {
+  const modal = document.getElementById('musicModal');
+  const content = document.getElementById('modalContent');
+  const first = track.title ? track.title.charAt(0).toUpperCase() : '♫';
+  content.innerHTML = `
+    <div class="modal-track-info"><div class="modal-album-art">${first}</div>
+    <div class="modal-track-details">
+      <div class="modal-track-title">${escapeHtml(track.title||'Sin título')}</div>
+      <div class="modal-track-artist">${escapeHtml(track.artist||'Artista desconocido')}</div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="modal-action-btn play" onclick='playTrackById(${track.id})'>▶ Reproducir</button>
+        <button class="modal-action-btn secondary" onclick='exportTrack(${track.id})'>⬇️ Guardar copia</button>
+        <button class="modal-action-btn secondary" onclick='removeTrack(${track.id})'>🗑️ Eliminar</button>
+      </div>
+    </div></div>
+    <div class="modal-stats">
+      <div class="stat-item"><div class="stat-label">Duración</div><div class="stat-value">${track.duration?formatTime(track.duration):'Desconocida'}</div></div>
+      <div class="stat-item"><div class="stat-label">Tamaño</div><div class="stat-value">${(track.fileSize? (track.fileSize/1024/1024).toFixed(2):'—')} MB</div></div>
+      <div class="stat-item"><div class="stat-label">Formato</div><div class="stat-value">${(track.fileType||'—').toUpperCase()}</div></div>
+      <div class="stat-item"><div class="stat-label">Agregado</div><div class="stat-value">${escapeHtml(track.dateAdded||'—')}</div></div>
+    </div>
+  `;
+  modal.style.display = 'flex';
+}
+function closeModal(){ document.getElementById('musicModal').style.display='none'; }
+
+// ---------- Play helpers ----------
+async function playTrackById(id) {
+  const all = await getAllTracksFromDB(); const t = all.find(x=>Number(x.id)===Number(id)); if (t) playTrack(t);
+}
+
+// ---------- Load music: main logic to guarantee local-first ----------
+async function loadMusic() {
+  try {
+    if (!db) await openDB();
+
+    // cargar token de usuario local o crear
+    let token = await metaGet('userToken');
+    if (!token) { token = uuidv4(); await metaPut('userToken', token); }
+
+    // intentamos restaurar directoryHandle
+    try {
+      const saved = await metaGet('directoryHandle');
+      if (saved && !directoryHandle) directoryHandle = saved;
+    } catch (e) { directoryHandle = null; }
+
+    // Si tenemos directory handle y permisos -> sincronizar exacto desde carpeta
+    if (directoryHandle) {
+      try {
+        const perm = await directoryHandle.requestPermission({ mode: 'read' });
+        if (perm === 'granted' || perm === 'prompt') {
+          // sincronizar: limpiar DB y poblar desde carpeta
+          const scanned = await clearAndPopulateFromDirectory();
+          renderMusicGrid(scanned);
+          updateStats(scanned);
+          return;
         }
+      } catch (err) { console.warn('perm check fail', err); }
+    }
 
-        // ---------- DB: guardar pista (metadatos + ubicación) ----------
-        function saveTrackToDB(track) {
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(['music'], 'readwrite');
-                const store = tx.objectStore('music');
-                const req = store.add(track);
-                req.onsuccess = () => resolve(req.result);
-                req.onerror = (e) => reject(e.target.error || new Error('Error al guardar pista'));
-            });
-        }
+    // Si no hay carpeta o permiso, cargar desde DB (archivos previamente importados)
+    const tracks = await getAllTracksFromDB();
+    if (tracks.length === 0) {
+      // forzar al usuario a elegir carpeta o a agregar archivos
+      renderMusicGrid([]);
+      showToast('Selecciona una carpeta local o agrega archivos para que la app funcione (local).');
+      return;
+    }
 
-        function getAllTracks() {
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(['music'], 'readonly');
-                const store = tx.objectStore('music');
-                const req = store.getAll();
-                req.onsuccess = () => resolve(req.result || []);
-                req.onerror = (e) => reject(e.target.error);
-            });
-        }
+    renderMusicGrid(tracks);
+    updateStats(tracks);
+  } catch (err) {
+    console.error('loadMusic error', err);
+    showToast('Error cargando biblioteca. Revisa permisos y almacenamiento.');
+  }
+}
 
-        async function deleteTrackById(id) {
-            const tx = db.transaction(['music'], 'readwrite');
-            const store = tx.objectStore('music');
-            store.delete(Number(id));
-            return new Promise((res) => { tx.oncomplete = () => res(); });
-        }
+// ---------- UI Actions ----------
+document.getElementById('addMusicBtn').addEventListener('click', async ()=>{
+  if ('showDirectoryPicker' in window) {
+    const r = confirm('¿Seleccionar carpeta local para guardar automáticamente? (recomendado)');
+    if (r) { const ok = await requestDirectoryAccess(true); if (ok) { await clearAndPopulateFromDirectory(); showToast('Carpeta seleccionada y sincronizada'); await loadMusic(); return; } }
+  }
+  document.getElementById('fileInput').click();
+});
 
-        // ---------- UI Renders ----------
-        function renderMusicGrid(tracks) {
-            currentTracks = tracks;
-            const grid = document.getElementById('musicGrid');
+document.getElementById('refreshBtn').addEventListener('click', loadMusic);
 
-            if (!tracks || tracks.length === 0) {
-                grid.innerHTML = `
-                    <div style="grid-column:1/-1;text-align:center;padding:80px 20px;opacity:0.9;">
-                        <div style="font-size:72px;opacity:0.25;margin-bottom:20px;">🎵</div>
-                        <div style="font-size:22px;margin-bottom:10px;">Tu biblioteca está vacía</div>
-                        <div style="opacity:0.7;margin-bottom:20px;max-width:560px;margin-left:auto;margin-right:auto;">Arrastra archivos o haz clic en "Agregar Música" para empezar.</div>
-                        <button class="control-btn primary" onclick="document.getElementById('fileInput').click()">➕ Agregar Música</button>
-                    </div>
-                `;
-                return;
-            }
+document.getElementById('sortBtn').addEventListener('click', async ()=>{
+  const all = await getAllTracksFromDB(); all.sort((a,b)=> (a.title||'').localeCompare(b.title||'')); renderMusicGrid(all); });
 
-            grid.innerHTML = '';
+document.getElementById('filterBtn').addEventListener('click', ()=>{ alert('Filtrado básico: usa la búsqueda. (puedo añadir filtros avanzados si quieres)'); });
 
-            for (const track of tracks) {
-                const item = document.createElement('div');
-                item.className = 'music-item';
-                item.dataset.id = track.id;
+// Buscador en tiempo real
+document.getElementById('searchInput').addEventListener('input', async (e)=>{
+  const q = (e.target.value||'').toLowerCase().trim();
+  if (!q) { const all = await getAllTracksFromDB(); renderMusicGrid(all); return; }
+  const all = await getAllTracksFromDB();
+  const filtered = all.filter(t=> (t.title||'').toLowerCase().includes(q) || (t.artist||'').toLowerCase().includes(q) || (t.fileName||'').toLowerCase().includes(q));
+  renderMusicGrid(filtered);
+});
 
-                const firstChar = track.title ? track.title.charAt(0).toUpperCase() : '♫';
+// ---------- Init ----------
+window.addEventListener('DOMContentLoaded', async ()=>{
+  try { await openDB(); await loadMusic(); } catch (err) { console.error(err); showToast('Inicialización fallida. Revisa consola.'); }
+});
 
-                item.innerHTML = `
-                    <div class="album-art">
-                        <div>${firstChar}</div>
-                        <div class="play-overlay">▶</div>
-                    </div>
-                    <div class="music-info">
-                        <div class="music-title">${escapeHtml(track.title || 'Sin título')}</div>
-                        <div class="music-artist">${escapeHtml(track.artist || 'Artista desconocido')}</div>
-                    </div>
-                `;
-
-                // click para abrir modal
-                item.addEventListener('click', (e) => {
-                    // si hicieron click en overlay reproducir
-                    if (e.target.closest('.play-overlay')) {
-                        playTrack(track);
-                        return;
-                    }
-                    showTrackDetails(track);
-                });
-
-                // doble click para reproducir
-                item.addEventListener('dblclick', () => playTrack(track));
-
-                grid.appendChild(item);
-            }
-        }
-
-        function updateStats(tracks) {
-            document.getElementById('totalSongs').textContent = `${tracks.length} canciones`;
-            const artists = new Set(tracks.map(t => t.artist).filter(Boolean));
-            document.getElementById('totalArtists').textContent = `${artists.size} artistas`;
-            const totalDuration = tracks.reduce((s, t) => s + (t.duration || 0), 0);
-            document.getElementById('totalDuration').textContent = `${Math.floor(totalDuration/60)} min`;
-        }
-
-        // Sanitizar texto para insertar en HTML
-        function escapeHtml(text) {
-            return String(text)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
-
-        // ---------- Modal ----------
-        function showTrackDetails(track) {
-            const modal = document.getElementById('musicModal');
-            const content = document.getElementById('modalContent');
-            const firstChar = track.title ? track.title.charAt(0).toUpperCase() : '♫';
-            const fileSizeMB = (track.fileSize / 1024 / 1024).toFixed(2);
-            const duration = track.duration ? formatTime(track.duration) : 'Desconocida';
-            const dateAdded = track.dateAdded ? new Date(track.dateAdded).toLocaleString() : 'Desconocida';
-            const format = (track.fileType && track.fileType.split('/')[1]) ? track.fileType.split('/')[1].toUpperCase() : 'DESCONOCIDO';
-
-            content.innerHTML = `
-                <div class="modal-track-info">
-                    <div class="modal-album-art">${firstChar}</div>
-                    <div class="modal-track-details">
-                        <div class="modal-track-title">${escapeHtml(track.title || 'Sin título')}</div>
-                        <div class="modal-track-artist">${escapeHtml(track.artist || 'Artista desconocido')}</div>
-                        <div class="modal-track-album" style="opacity:0.8;margin-bottom:8px;">${escapeHtml(track.fileName || '')}</div>
-                        <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;">
-                            <button class="modal-action-btn play" onclick='playTrackById(${track.id})'>▶ Reproducir</button>
-                            <button class="modal-action-btn secondary" onclick='exportTrack(${track.id})'>⬇️ Guardar copia</button>
-                            <button class="modal-action-btn secondary" onclick='removeTrack(${track.id})'>🗑️ Eliminar</button>
-                        </div>
-
-                    </div>
-                </div>
-                <div class="modal-stats">
-                    <div class="stat-item"><div class="stat-label">Duración</div><div class="stat-value">${duration}</div></div>
-                    <div class="stat-item"><div class="stat-label">Tamaño</div><div class="stat-value">${fileSizeMB} MB</div></div>
-                    <div class="stat-item"><div class="stat-label">Formato</div><div class="stat-value">${format}</div></div>
-                    <div class="stat-item"><div class="stat-label">Agregado</div><div class="stat-value">${escapeHtml(dateAdded)}</div></div>
-                </div>
-            `;
-
-            modal.style.display = 'flex';
-        }
-
-        function closeModal() { document.getElementById('musicModal').style.display = 'none'; }
-
-        // ---------- Reproducción ----------
-        // Reproduce track usando su id (busca en indexedDB)
-        async function playTrackById(id) {
-            const tracks = await getAllTracks();
-            const t = tracks.find(x => Number(x.id) === Number(id));
-            if (t) playTrack(t);
-        }
-
-        async function playTrack(track) {
-            try {
-                // Intentar obtener File/Blob para reproducir
-                let fileBlob = null;
-                if (track.storage === 'fs' && track.fileName && directoryHandle) {
-                    try {
-                        const fh = await directoryHandle.getFileHandle(track.fileName);
-                        const f = await fh.getFile();
-                        fileBlob = f;
-                    } catch (err) {
-                        console.warn('No se pudo leer archivo desde FS, fallback a blob guardado');
-                    }
-                }
-
-                if (!fileBlob && track.blobKey) {
-                    // Hemos guardado blob en DB (fallback)
-                    fileBlob = await readBlobFromIDB(track.blobKey);
-                }
-
-                if (!fileBlob && track.url) {
-                    // quizá se guardó URL (data URL)
-                    fileBlob = dataURLtoBlob(track.url);
-                }
-
-                if (!fileBlob) {
-                    showToast('No se pudo acceder al archivo para reproducir');
-                    return;
-                }
-
-                // crear URL para audio
-                const url = URL.createObjectURL(fileBlob);
-
-                // guardar informacion en localStorage para reproductor (si hay)
-                localStorage.setItem('currentTrackBlobUrl', url);
-                localStorage.setItem('currentTrack', JSON.stringify(track));
-
-                // abrir reproductor en nueva pestaña o en pagina reproductor
-                window.location.href = 'reproductor.html';
-            } catch (err) {
-                console.error(err);
-                showToast('Error al intentar reproducir');
-            }
-        }
-
-        // ---------- Blob IDB storage (fallback) ----------
-        function saveBlobInIDB(blob) {
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(['meta'], 'readwrite');
-                const store = tx.objectStore('meta');
-                const key = `blob-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
-                const req = store.put({ key, value: blob });
-                req.onsuccess = () => resolve(key);
-                req.onerror = (e) => reject(e.target.error);
-            });
-        }
-
-        function readBlobFromIDB(key) {
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(['meta'], 'readonly');
-                const store = tx.objectStore('meta');
-                const req = store.get(key);
-                req.onsuccess = () => resolve(req.result ? req.result.value : null);
-                req.onerror = (e) => reject(e.target.error);
-            });
-        }
-
-        // ---------- Manejo de archivos (drag/drop + input) ----------
-        const fileInput = document.getElementById('fileInput');
-        fileInput.addEventListener('change', async (e) => {
-            await handleFiles(e.target.files);
-            fileInput.value = '';
-        });
-
-        document.getElementById('uploadArea').addEventListener('click', () => fileInput.click());
-
-        function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; document.getElementById('uploadArea').classList.add('dragover'); }
-        function handleDragLeave(e) { e.preventDefault(); document.getElementById('uploadArea').classList.remove('dragover'); }
-        async function handleDrop(e) { e.preventDefault(); document.getElementById('uploadArea').classList.remove('dragover'); await handleFiles(e.dataTransfer.files); }
-        document.getElementById('uploadArea').addEventListener('dragover', handleDragOver);
-        document.getElementById('uploadArea').addEventListener('dragleave', handleDragLeave);
-        document.getElementById('uploadArea').addEventListener('drop', handleDrop);
-
-        async function handleFiles(fileList) {
-            if (!fileList || fileList.length === 0) return;
-            const files = Array.from(fileList).filter(f => f.type && f.type.startsWith('audio/'));
-            if (files.length === 0) { showToast('No se encontraron archivos de audio'); return; }
-
-            // intentar pedir acceso a carpeta (una sola vez)
-            let haveDir = !!directoryHandle;
-            if (!haveDir) {
-                haveDir = await requestDirectoryAccess();
-            }
-
-            let processed = 0;
-
-            for (const file of files) {
-                try {
-                    // extraer metadatos simples
-                    const fileNameNoExt = file.name.replace(/\.[^/.]+$/, '');
-                    const parts = fileNameNoExt.split(' - ');
-                    let artist = 'Artista desconocido';
-                    let title = fileNameNoExt;
-                    if (parts.length >= 2) { artist = parts[0].trim(); title = parts.slice(1).join(' - ').trim(); }
-
-                    // obtener duracion de manera asíncrona
-                    const duration = await getAudioDuration(file);
-
-                    // si tenemos directoryHandle intentar guardar fichero fisico
-                    let storage = 'idb';
-                    let blobKey = null;
-                    let savedFilename = null;
-
-                    if (haveDir) {
-                        try {
-                            const savedFile = await saveFileToDirectory(file);
-                            storage = 'fs';
-                            savedFilename = savedFile.name;
-                        } catch (err) {
-                            console.warn('No se pudo grabar en la carpeta, se guarda en IndexedDB', err);
-                            storage = 'idb';
-                        }
-                    }
-
-                    // si no guardamos en FS, guardamos blob en IDB (meta store)
-                    if (storage === 'idb') {
-                        blobKey = await saveBlobInIDB(file);
-                    }
-
-                    const track = {
-                        title: title,
-                        artist: artist,
-                        fileName: file.name,
-                        fileSize: file.size,
-                        fileType: file.type,
-                        duration: Math.floor(duration) || 0,
-                        dateAdded: new Date().toISOString(),
-                        storage: storage, // 'fs' o 'idb'
-                        blobKey: blobKey || null,
-                        fileNameOnDisk: savedFilename || null
-                    };
-
-                    await saveTrackToDB(track);
-                    processed++;
-                    showToast(`Procesado ${processed}/${files.length}`);
-                } catch (err) {
-                    console.error('Error procesando archivo', err);
-                    showToast(`Error procesando ${file.name}`);
-                }
-            }
-
-            // recargar biblioteca
-            await loadMusic();
-            showToast(`${processed} canción(es) agregadas`);
-        }
-
-        // Obtener duración de un archivo audio como Blob
-        function getAudioDuration(file) {
-            return new Promise((resolve) => {
-                const url = URL.createObjectURL(file);
-                const audio = new Audio();
-                audio.src = url;
-                audio.addEventListener('loadedmetadata', () => {
-                    const d = audio.duration || 0;
-                    URL.revokeObjectURL(url);
-                    resolve(d);
-                });
-                audio.addEventListener('error', () => { URL.revokeObjectURL(url); resolve(0); });
-            });
-        }
-
-        // util: dataURL -> blob
-        function dataURLtoBlob(dataurl) {
-            const arr = dataurl.split(',');
-            const mime = arr[0].match(/:(.*?);/)[1];
-            const bstr = atob(arr[1]);
-            let n = bstr.length;
-            const u8arr = new Uint8Array(n);
-            while (n--) u8arr[n] = bstr.charCodeAt(n);
-            return new Blob([u8arr], { type: mime });
-        }
-
-        // ---------- Exportar pista (guardar copia) ----------
-        async function exportTrack(id) {
-            const tracks = await getAllTracks();
-            const t = tracks.find(x => Number(x.id) === Number(id));
-            if (!t) return showToast('No encontrado');
-
-            // intentar obtener blob
-            let blob = null;
-            if (t.storage === 'fs' && directoryHandle) {
-                try {
-                    const fh = await directoryHandle.getFileHandle(t.fileNameOnDisk || t.fileName);
-                    blob = await fh.getFile();
-                } catch (err) { console.warn(err); }
-            }
-            if (!blob && t.blobKey) blob = await readBlobFromIDB(t.blobKey);
-            if (!blob) return showToast('No se pudo obtener el archivo para exportar');
-
-            // usar File System Access API para permitir al usuario guardar copia (showSaveFilePicker)
-            try {
-                if ('showSaveFilePicker' in window) {
-                    const opts = { suggestedName: t.fileName, types: [{ description: 'Audio', accept: { [t.fileType]: ['.mp3', '.wav', '.ogg', '.m4a'] } }] };
-                    const handle = await window.showSaveFilePicker(opts);
-                    const writable = await handle.createWritable();
-                    await writable.write(blob);
-                    await writable.close();
-                    showToast('Copia guardada correctamente');
-                    return;
-                }
-            } catch (err) {
-                console.warn(err);
-            }
-
-            // fallback: usar descarga automática
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = t.fileName;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            URL.revokeObjectURL(url);
-            showToast('Descarga iniciada');
-        }
-
-        // ---------- Eliminar pista ----------
-        async function removeTrack(id) {
-            await deleteTrackById(id);
-            await loadMusic();
-            closeModal();
-            showToast('Eliminado');
-        }
-
-        // ---------- Cargar biblioteca ----------
-        async function loadMusic() {
-            try {
-                if (!db) await openDB();
-                // recuperar directory handle si lo hay
-                const savedHandle = await getMeta('directoryHandle');
-                if (savedHandle && !directoryHandle) {
-                    try { directoryHandle = savedHandle; } catch (err) { directoryHandle = null; }
-                }
-
-                const tracks = await getAllTracks();
-                renderMusicGrid(tracks);
-                updateStats(tracks);
-            } catch (err) {
-                console.error(err);
-                showToast('Error al cargar la biblioteca');
-            }
-        }
-
-        // ---------- Utilidades ----------
-        function formatTime(seconds) {
-            const mins = Math.floor(seconds / 60); const secs = Math.floor(seconds % 60);
-            return `${mins}:${String(secs).padStart(2, '0')}`;
-        }
-
-        function showToast(msg, time = 3000) {
-            const t = document.getElementById('toast');
-            t.textContent = msg;
-            t.style.display = 'block';
-            clearTimeout(t._timer);
-            t._timer = setTimeout(() => { t.style.display = 'none'; }, time);
-        }
-
-        // ---------- Acciones UI ----------
-        document.getElementById('addMusicBtn').addEventListener('click', async () => {
-            // preguntar si queremos dar acceso a carpeta para guardar automáticamente
-            if ('showDirectoryPicker' in window) {
-                const r = confirm('¿Deseas seleccionar una carpeta en tu equipo para que la app guarde allí tus archivos (recomendado)?');
-                if (r) {
-                    const ok = await requestDirectoryAccess();
-                    if (!ok) showToast('No se concedieron permisos de carpeta. Se usará almacenamiento interno.');
-                }
-            }
-            document.getElementById('fileInput').click();
-        });
-
-        document.getElementById('refreshBtn').addEventListener('click', loadMusic);
-
-        // Inicializar todo al cargar
-        window.addEventListener('DOMContentLoaded', async () => {
-            try {
-                await openDB();
-                await loadMusic();
-            } catch (err) {
-                console.error('Error inicializando:', err);
-                showToast('Error en inicialización. Revisa la consola.');
-            }
-        });
-    </script>
+</script>
 </body>
 </html>
