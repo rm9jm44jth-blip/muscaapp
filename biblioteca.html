@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biblioteca - Música Pro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #000;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        body.light-mode {
+            background: #f5f5f7;
+            color: #1d1d1f;
+        }
+
+        /* Navegación */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 32px;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: saturate(180%) blur(20px);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        body.light-mode nav {
+            background: rgba(255, 255, 255, 0.95);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ff375f, #ff9f0a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: #fff;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 500;
+            padding: 10px 20px;
+            border-radius: 100px;
+            transition: all 0.3s;
+            opacity: 0.8;
+        }
+
+        body.light-mode .nav-links a {
+            color: #1d1d1f;
+        }
+
+        .nav-links a:hover, .nav-links a.active {
+            background: rgba(255, 255, 255, 0.1);
+            opacity: 1;
+        }
+
+        body.light-mode .nav-links a:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 20px;
+            color: #fff;
+        }
+
+        body.light-mode .theme-toggle {
+            background: rgba(0, 0, 0, 0.05);
+            color: #1d1d1f;
+        }
+
+        /* Header de Biblioteca */
+        .library-header {
+            padding: 48px 32px 32px;
+            background: linear-gradient(135deg, rgba(255, 55, 95, 0.1), rgba(255, 159, 10, 0.1));
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        body.light-mode .library-header {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .library-header h1 {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 32px;
+            opacity: 0.8;
+        }
+
+        /* Barra de búsqueda */
+        .search-container {
+            padding: 24px 32px;
+            position: sticky;
+            top: 80px;
+            z-index: 900;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        body.light-mode .search-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .search-bar {
+            width: 100%;
+            max-width: 600px;
+            padding: 16px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 100px;
+            color: #fff;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        body.light-mode .search-bar {
+            background: rgba(0, 0, 0, 0.05);
+            border-color: rgba(0, 0, 0, 0.1);
+            color: #1d1d1f;
+        }
+
+        .search-bar:focus {
+            outline: none;
+            border-color: #ff375f;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Controles */
+        .controls {
+            padding: 24px 32px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        body.light-mode .controls {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .control-btn {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 100px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        body.light-mode .control-btn {
+            background: rgba(0, 0, 0, 0.05);
+            color: #1d1d1f;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .control-btn.primary {
+            background: linear-gradient(135deg, #ff375f, #ff9f0a);
+            color: white;
+        }
+
+        .control-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(255, 55, 95, 0.3);
+        }
+
+        /* Grid de música */
+        .music-grid {
+            padding: 32px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 24px;
+        }
+
+        .music-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        body.light-mode .music-item {
+            background: rgba(0, 0, 0, 0.02);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .music-item:hover {
+            transform: translateY(-4px);
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .album-art {
+            width: 100%;
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #ff375f, #ff9f0a);
+            border-radius: 12px;
+            margin-bottom: 16px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .album-art img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .default-art {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: white;
+            width: 100%;
+            height: 100%;
+        }
+
+        .music-info {
+            text-align: center;
+        }
+
+        .music-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 16px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .music-artist {
+            opacity: 0.7;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Área de subida */
+        .upload-area {
+            margin: 32px;
+            padding: 48px;
+            border: 3px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        body.light-mode .upload-area {
+            border-color: rgba(0, 0, 0, 0.2);
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #ff375f;
+            background: rgba(255, 55, 95, 0.05);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 64px;
+            margin-bottom: 24px;
+            opacity: 0.5;
+        }
+
+        .upload-text {
+            font-size: 20px;
+            margin-bottom: 16px;
+        }
+
+        .upload-subtext {
+            opacity: 0.7;
+            font-size: 14px;
+        }
+
+        /* Modal de detalles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(40px);
+            border-radius: 24px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        body.light-mode .modal-content {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            display: none;
+            z-index: 3000;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            nav, .library-header, .search-container, .controls, .music-grid {
+                padding: 16px 20px;
+            }
+            
+            .library-header h1 {
+                font-size: 32px;
+            }
+            
+            .music-grid {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                gap: 16px;
+            }
+            
+            .upload-area {
+                margin: 20px;
+                padding: 32px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="logo">Música Pro</div>
+        <div class="nav-links">
+            <a href="index.html">Inicio</a>
+            <a href="biblioteca.html" class="active">Biblioteca</a>
+            <a href="reproductor.html">Reproductor</a>
+            <a href="playlists.html">Playlists</a>
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+        </div>
+    </nav>
+
+    <div class="library-header">
+        <h1>Tu Biblioteca</h1>
+        <div class="stats">
+            <span id="totalSongs">0 canciones</span>
+            <span id="totalArtists">0 artistas</span>
+            <span id="totalDuration">0 minutos</span>
+        </div>
+    </div>
+
+    <div class="search-container">
+        <input type="text" 
+               class="search-bar" 
+               id="searchInput" 
+               placeholder="Buscar canciones, artistas, álbumes..."
+               autocomplete="off">
+    </div>
+
+    <div class="controls">
+        <button class="control-btn primary" id="addMusicBtn">
+            <span>+</span>
+            Agregar Música
+        </button>
+        <button class="control-btn" id="sortBtn">
+            <span>⇅</span>
+            Ordenar
+        </button>
+        <button class="control-btn" id="filterBtn">
+            <span>⚙️</span>
+            Filtros
+        </button>
+        <button class="control-btn" id="refreshBtn">
+            <span>🔄</span>
+            Actualizar
+        </button>
+    </div>
+
+    <input type="file" 
+           id="fileInput" 
+           accept="audio/*" 
+           multiple 
+           style="display: none;"
+           onchange="handleFiles(this.files)">
+
+    <div class="upload-area" 
+         id="uploadArea"
+         ondragover="handleDragOver(event)"
+         ondragleave="handleDragLeave(event)"
+         ondrop="handleDrop(event)">
+        <div class="upload-icon">🎵</div>
+        <div class="upload-text">Arrastra tu música aquí</div>
+        <div class="upload-subtext">o haz clic para seleccionar archivos</div>
+    </div>
+
+    <div class="music-grid" id="musicGrid">
+        <!-- Las canciones se cargan dinámicamente aquí -->
+    </div>
+
+    <div class="modal" id="musicModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">×</button>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Sistema de temas
+        const themeToggle = document.getElementById('themeToggle');
+        const body = document.body;
+
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'light') {
+            body.classList.add('light-mode');
+            themeToggle.textContent = '☀️';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            body.classList.toggle('light-mode');
+            const isLight = body.classList.contains('light-mode');
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+            themeToggle.textContent = isLight ? '☀️' : '🌙';
+        });
+
+        // Base de datos IndexedDB
+        let db;
+        const DB_NAME = 'MusicProDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'music';
+
+        // Inicializar base de datos
+        function initDB() {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+            request.onupgradeneeded = function(event) {
+                db = event.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    const store = db.createObjectStore(STORE_NAME, { 
+                        keyPath: 'id', 
+                        autoIncrement: true 
+                    });
+                    store.createIndex('title', 'title', { unique: false });
+                    store.createIndex('artist', 'artist', { unique: false });
+                    store.createIndex('dateAdded', 'dateAdded', { unique: false });
+                }
+            };
+
+            request.onsuccess = function(event) {
+                db = event.target.result;
+                loadMusic();
+            };
+
+            request.onerror = function(event) {
+                showToast('Error al cargar la base de datos');
+            };
+        }
+
+        // Cargar música desde la base de datos
+        function loadMusic() {
+            const transaction = db.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.getAll();
+
+            request.onsuccess = function() {
+                const music = request.result;
+                renderMusicGrid(music);
+                updateStats(music);
+            };
+        }
+
+        // Renderizar grid de música
+        function renderMusicGrid(music) {
+            const grid = document.getElementById('musicGrid');
+            grid.innerHTML = '';
+
+            if (music.length === 0) {
+                grid.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
+                        <div style="font-size: 64px; margin-bottom: 24px; opacity: 0.3;">🎵</div>
+                        <div style="font-size: 20px; margin-bottom: 12px;">Tu biblioteca está vacía</div>
+                        <div style="opacity: 0.7;">Agrega tu música para comenzar</div>
+                    </div>
+                `;
+                return;
+            }
+
+            music.forEach((track, index) => {
+                const item = document.createElement('div');
+                item.className = 'music-item';
+                item.dataset.id = track.id;
+                
+                const firstChar = track.title ? track.title.charAt(0).toUpperCase() : '🎵';
+                
+                item.innerHTML = `
+                    <div class="album-art">
+                        <div class="default-art">${firstChar}</div>
+                    </div>
+                    <div class="music-info">
+                        <div class="music-title">${track.title || 'Sin título'}</div>
+                        <div class="music-artist">${track.artist || 'Artista desconocido'}</div>
+                    </div>
+                `;
+
+                item.addEventListener('click', () => {
+                    showTrackDetails(track);
+                });
+
+                grid.appendChild(item);
+            });
+        }
+
+        // Actualizar estadísticas
+        function updateStats(music) {
+            document.getElementById('totalSongs').textContent = `${music.length} canciones`;
+            
+            const artists = new Set(music.map(track => track.artist).filter(Boolean));
+            document.getElementById('totalArtists').textContent = `${artists.size} artistas`;
+            
+            const totalDuration = music.reduce((total, track) => total + (track.duration || 0), 0);
+            const minutes = Math.floor(totalDuration / 60);
+            document.getElementById('totalDuration').textContent = `${minutes} minutos`;
+        }
+
+        // Manejar subida de archivos
+        function handleFiles(files) {
+            const uploadArea = document.getElementById('uploadArea');
+            uploadArea.classList.remove('dragover');
+
+            Array.from(files).forEach(file => {
+                if (file.type.startsWith('audio/')) {
+                    processAudioFile(file);
+                }
+            });
+
+            showToast(`${files.length} archivo(s) procesados`);
+        }
+
+        function processAudioFile(file) {
+            const url = URL.createObjectURL(file);
+            
+            // Extraer metadatos básicos del nombre del archivo
+            const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remover extensión
+            const parts = fileName.split(' - ');
+            
+            let artist = 'Artista desconocido';
+            let title = fileName;
+            
+            if (parts.length >= 2) {
+                artist = parts[0];
+                title = parts.slice(1).join(' - ');
+            }
+
+            const track = {
+                title: title,
+                artist: artist,
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type,
+                url: url,
+                dateAdded: new Date().toISOString(),
+                duration: 0 // Se calcularía con un analizador de audio real
+            };
+
+            saveTrack(track);
+        }
+
+        function saveTrack(track) {
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.add(track);
+
+            request.onsuccess = function() {
+                loadMusic();
+            };
+        }
+
+        // Mostrar detalles de la canción
+        function showTrackDetails(track) {
+            const modal = document.getElementById('musicModal');
+            const content = document.getElementById('modalContent');
+            
+            content.innerHTML = `
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <div style="font-size: 72px; margin-bottom: 16px;">🎵</div
