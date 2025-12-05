@@ -3,317 +3,346 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Música Pro v1.4 Ultra - Inicio</title>
+    <title>Música Pro - Tu Biblioteca Personal</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        * {
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, #0f0f23, #1a1a2e);
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #000;
             color: #fff;
             min-height: 100vh;
-            transition: background 0.5s;
+            overflow-x: hidden;
         }
+
         body.light-mode {
             background: #f5f5f7;
-            color: #000;
+            color: #1d1d1f;
         }
+
+        /* Navegación */
         nav {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(40px);
-            -webkit-backdrop-filter: blur(40px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 18px 32px;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
             position: sticky;
             top: 0;
-            z-index: 100;
-            border-radius: 0 0 30px 30px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
+
         body.light-mode nav {
-            background: rgba(255, 255, 255, 0.9);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.95);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
         }
-        nav .logo {
-            font-size: 2em;
-            font-weight: bold;
-            background: linear-gradient(45deg, #1db954, #ff6b6b);
+
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ff375f, #ff9f0a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            font-size: 32px;
+            background: linear-gradient(135deg, #ff375f, #ff9f0a);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        nav .nav-links {
+
+        .nav-links {
             display: flex;
-            gap: 25px;
+            gap: 24px;
             align-items: center;
         }
-        nav a {
-            color: #b3b3b3;
+
+        .nav-links a {
+            color: #fff;
             text-decoration: none;
+            font-size: 16px;
             font-weight: 500;
-            transition: all 0.4s;
-            padding: 12px 20px;
-            border-radius: 30px;
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(30px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 100px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0.8;
+        }
+
+        body.light-mode .nav-links a {
+            color: #1d1d1f;
+        }
+
+        .nav-links a:hover, .nav-links a.active {
+            background: rgba(255, 255, 255, 0.1);
+            opacity: 1;
+            transform: translateY(-2px);
+        }
+
+        body.light-mode .nav-links a:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 20px;
+            color: #fff;
+        }
+
+        body.light-mode .theme-toggle {
+            background: rgba(0, 0, 0, 0.05);
+            color: #1d1d1f;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1) rotate(15deg);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 120px 32px 80px;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(255, 55, 95, 0.1), rgba(255, 159, 10, 0.1));
             position: relative;
             overflow: hidden;
         }
-        body.light-mode nav a {
-            color: #333;
-            background: rgba(0, 0, 0, 0.05);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-        }
-        nav a::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s;
-        }
-        nav a:hover::before {
-            left: 100%;
-        }
-        nav a:hover, nav a.active {
-            color: #1db954;
-            background: rgba(255, 255, 255, 0.1);
-            transform: scale(1.05);
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
-        }
-        body.light-mode nav a:hover {
-            background: rgba(0, 0, 0, 0.1);
-        }
-        #theme-toggle {
-            background: rgba(255, 255, 255, 0.05);
-            border: none;
-            color: #fff;
-            font-size: 1.5em;
-            padding: 15px;
-            border-radius: 50%;
-            cursor: pointer;
-            transition: all 0.4s;
-            backdrop-filter: blur(30px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            position: relative;
-        }
-        body.light-mode #theme-toggle {
-            background: rgba(0, 0, 0, 0.05);
-            color: #000;
-            border: 1px solid rgba(0, 0, 0, 0.1);
-        }
-        #theme-toggle::before {
+
+        .hero::before {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(45deg, rgba(255, 255, 255, 0.1), transparent);
-            border-radius: 50%;
-            animation: glassRipple 4s ease-in-out infinite;
-            pointer-events: none;
+            background: radial-gradient(circle at 30% 20%, rgba(255, 55, 95, 0.2), transparent 50%),
+                        radial-gradient(circle at 70% 80%, rgba(255, 159, 10, 0.2), transparent 50%);
+            animation: float 20s infinite ease-in-out;
         }
-        #theme-toggle:hover {
-            background: rgba(255, 255, 255, 0.15);
-            transform: scale(1.1) rotate(10deg);
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
         }
-        body.light-mode #theme-toggle:hover {
-            background: rgba(0, 0, 0, 0.15);
-        }
-        @keyframes glassRipple {
-            0% { transform: scale(1); opacity: 0.5; }
-            50% { transform: scale(1.1); opacity: 0.8; }
-            100% { transform: scale(1); opacity: 0.5; }
-        }
-        .hero {
-            text-align: center;
-            padding: 100px 20px;
-            background: linear-gradient(135deg, #000, #1a1a1a);
-            animation: heroGlow 5s ease-in-out infinite;
-        }
-        body.light-mode .hero {
-            background: linear-gradient(135deg, #f5f5f7, #e5e5e7);
-        }
-        @keyframes heroGlow {
-            0%, 100% { filter: brightness(1); }
-            50% { filter: brightness(1.2); }
-        }
+
         .hero h1 {
-            font-size: 3em;
-            margin-bottom: 20px;
-            background: linear-gradient(45deg, #1db954, #ff6b6b);
+            font-size: 72px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, #ff375f, #ff9f0a);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-        }
-        .hero p {
-            font-size: 1.2em;
-            margin-bottom: 40px;
-        }
-        .hero .cta {
-            display: inline-block;
-            padding: 15px 30px;
-            background: rgba(255, 255, 255, 0.05);
-            color: #1db954;
-            text-decoration: none;
-            border-radius: 30px;
-            transition: all 0.4s;
-            backdrop-filter: blur(30px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
             position: relative;
-            overflow: hidden;
         }
-        body.light-mode .hero .cta {
-            background: rgba(0, 0, 0, 0.05);
-            color: #1db954;
-            border: 1px solid rgba(0, 0, 0, 0.1);
+
+        .hero p {
+            font-size: 24px;
+            opacity: 0.8;
+            max-width: 600px;
+            margin: 0 auto 48px;
+            line-height: 1.5;
         }
-        .hero .cta::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s;
+
+        .cta-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 18px 36px;
+            background: linear-gradient(135deg, #ff375f, #ff9f0a);
+            color: white;
+            text-decoration: none;
+            border-radius: 100px;
+            font-size: 18px;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 8px 32px rgba(255, 55, 95, 0.3);
         }
-        .hero .cta:hover::before {
-            left: 100%;
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(255, 55, 95, 0.4);
         }
-        .hero .cta:hover {
-            transform: scale(1.05);
-            box-shadow: 0 10px 25px rgba(29, 185, 84, 0.3);
-        }
-        .preview {
-            padding: 40px 20px;
-            text-align: center;
-        }
-        .preview h2 {
-            margin-bottom: 20px;
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 20px;
+
+        /* Features Grid */
+        .features {
+            padding: 80px 32px;
             max-width: 1200px;
             margin: 0 auto;
         }
-        .item {
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 32px;
+            margin-top: 48px;
+        }
+
+        .feature-card {
             background: rgba(255, 255, 255, 0.05);
-            border-radius: 30px;
-            padding: 20px;
-            text-align: center;
-            transition: all 0.4s;
-            cursor: pointer;
-            backdrop-filter: blur(30px);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 32px;
+            transition: all 0.3s;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            position: relative;
-            overflow: hidden;
         }
-        body.light-mode .item {
-            background: rgba(0, 0, 0, 0.05);
-            border: 1px solid rgba(0, 0, 0, 0.1);
+
+        body.light-mode .feature-card {
+            background: rgba(0, 0, 0, 0.02);
+            border: 1px solid rgba(0, 0, 0, 0.08);
         }
-        .item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s;
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
         }
-        .item:hover::before {
-            left: 100%;
+
+        .feature-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #ff375f, #ff9f0a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
-        .item:hover {
-            background: rgba(255, 255, 255, 0.15);
-            transform: translateY(-10px) scale(1.02);
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5);
+
+        .feature-card h3 {
+            font-size: 22px;
+            margin-bottom: 12px;
         }
-        body.light-mode .item:hover {
-            background: rgba(0, 0, 0, 0.15);
+
+        .feature-card p {
+            opacity: 0.7;
+            line-height: 1.6;
         }
-        .item img {
-            width: 100%;
-            height: 150px;
-            object-fit: cover;
-            border-radius: 20px;
-            margin-bottom: 10px;
+
+        /* Footer */
+        footer {
+            margin-top: 80px;
+            padding: 40px 32px;
+            background: rgba(255, 255, 255, 0.05);
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .item .title {
-            font-weight: 600;
+
+        body.light-mode footer {
+            background: rgba(0, 0, 0, 0.02);
+            border-top: 1px solid rgba(0, 0, 0, 0.08);
         }
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.9);
-            color: #000;
-            padding: 15px;
-            border-radius: 30px;
-            display: none;
-            z-index: 1000;
-            backdrop-filter: blur(30px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
+
+        /* Responsive */
         @media (max-width: 768px) {
+            nav {
+                padding: 16px 20px;
+            }
+            
+            .nav-links {
+                gap: 12px;
+            }
+            
+            .nav-links a {
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+            
             .hero h1 {
-                font-size: 2em;
+                font-size: 48px;
             }
-            .grid {
-                grid-template-columns: 1fr;
+            
+            .hero p {
+                font-size: 18px;
             }
-            nav .nav-links {
-                gap: 15px;
+            
+            .features {
+                padding: 40px 20px;
             }
         }
     </style>
 </head>
 <body>
     <nav>
-        <div class="logo">Música Pro</div>
+        <div class="logo">
+            <span class="logo-icon">🎵</span>
+            Música Pro
+        </div>
         <div class="nav-links">
-            <a href="#home" class="active">Inicio</a>
-            <a href="files.html">Biblioteca</a>
-            <a href="player.html">Reproductor</a>
-            <a href="links.html">Descargas</a>
-            <button id="theme-toggle">🌙</button>
+            <a href="index.html" class="active">Inicio</a>
+            <a href="biblioteca.html">Biblioteca</a>
+            <a href="reproductor.html">Reproductor</a>
+            <a href="playlists.html">Playlists</a>
+            <button class="theme-toggle" id="themeToggle">🌙</button>
         </div>
     </nav>
 
     <section class="hero">
-        <h1>Música Pro Ultra</h1>
-        <p>Tu biblioteca musical local, estilo Apple Music pero mejor. Ultra moderna, con efectos de vidrio líquido y reproducción perfecta.</p>
-        <a href="files.html" class="cta">Explorar Biblioteca</a>
+        <h1>Tu Música, Tu Estilo</h1>
+        <p>La biblioteca musical más avanzada. Organiza, reproduce y disfruta tu música local con elegancia y potencia.</p>
+        <a href="biblioteca.html" class="cta-button">
+            <span>Explorar Biblioteca</span>
+            <span>→</span>
+        </a>
     </section>
 
-    <section class="preview">
-        <h2>Escuchar ahora</h2>
-        <div class="grid" id="preview-grid">
-            <!-- Vista previa de pistas recientes -->
+    <section class="features">
+        <h2 style="text-align: center; font-size: 48px; margin-bottom: 24px;">Características Pro</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🎼</div>
+                <h3>Biblioteca Inteligente</h3>
+                <p>Organiza automáticamente tu música por artista, álbum y género. Soporte completo para metadatos.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎧</div>
+                <h3>Reproductor Ultra</h3>
+                <p>Calidad de sonido excepcional con ecualizador profesional y efectos espaciales inmersivos.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📁</div>
+                <h3>Sincronización Cloud</h3>
+                <p>Accede a tu música desde cualquier dispositivo. Tus listas siempre disponibles.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎨</div>
+                <h3>Diseño Elegante</h3>
+                <p>Interfaz inspirada en Apple Music con efectos de vidrio y animaciones fluidas.</p>
+            </div>
         </div>
     </section>
 
-    <div class="toast" id="toast">Acción completada</div>
+    <footer>
+        <p>Música Pro v2.0 • Tu biblioteca musical personal • Sin límites</p>
+    </footer>
 
     <script>
-        // Modo oscuro/día
-        const themeToggle = document.getElementById('theme-toggle');
+        // Sistema de temas
+        const themeToggle = document.getElementById('themeToggle');
         const body = document.body;
+
+        // Verificar tema guardado
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'light') {
             body.classList.add('light-mode');
             themeToggle.textContent = '☀️';
         }
+
         themeToggle.addEventListener('click', () => {
             body.classList.toggle('light-mode');
             const isLight = body.classList.contains('light-mode');
@@ -321,45 +350,45 @@
             themeToggle.textContent = isLight ? '☀️' : '🌙';
         });
 
-        // Cargar vista previa de pistas
-        const dbPromise = indexedDB.open('MusicDB', 1);
-        dbPromise.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains('tracks')) {
-                db.createObjectStore('tracks', { keyPath: 'id', autoIncrement: true });
+        // Efecto de escritura para el título
+        const heroTitle = document.querySelector('.hero h1');
+        const originalText = heroTitle.textContent;
+        heroTitle.textContent = '';
+
+        let charIndex = 0;
+        function typeWriter() {
+            if (charIndex < originalText.length) {
+                heroTitle.textContent += originalText.charAt(charIndex);
+                charIndex++;
+                setTimeout(typeWriter, 100);
             }
-        };
+        }
 
-        function loadPreview() {
-            dbPromise.then(db => {
-                const tx = db.transaction('tracks', 'readonly');
-                const store = tx.objectStore('tracks');
-                store.getAll().then(results => {
-                    const grid = document.getElementById('preview-grid');
-                    grid.innerHTML = '';
-                    results.slice(0, 4).forEach(track => {
-                        const item = document.createElement('div');
-                        item.className = 'item';
-                        item.innerHTML = `
-                            <img src="https://via.placeholder.com/200x150/333/fff?text=${track.name.charAt(0)}" alt="Miniatura">
-                            <div class="title">${track.name}</div>
-                        `;
-                        item.onclick = () => window.location.href = `player.html?track=${track.id}`;
-                        grid.appendChild(item);
-                    });
-                });
+        // Iniciar animación después de cargar
+        window.addEventListener('load', () => {
+            setTimeout(typeWriter, 500);
+        });
+
+        // Efecto hover avanzado para tarjetas
+        document.querySelectorAll('.feature-card').forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                const rotateY = (x - centerX) / 25;
+                const rotateX = (centerY - y) / 25;
+                
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-8px)`;
             });
-        }
-
-        loadPreview();
-
-        // Notificaciones
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.style.display = 'block';
-            setTimeout(() => toast.style.display = 'none', 3000);
-        }
+            
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateY(0)';
+            });
+        });
     </script>
 </body>
 </html>
