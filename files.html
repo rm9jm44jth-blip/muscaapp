@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Archivos Locales - Música Pro</title>
+    <style>
+        /* Copia el CSS de la sección de archivos aquí */
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #0f0f23, #1a1a2e); color: #fff; }
+        .upload-section { text-align: center; background: rgba(255, 255, 255, 0.1); padding: 30px; border-radius: 20px; margin: 20px 0; }
+        .drop-zone { border: 2px dashed rgba(255, 255, 255, 0.5); padding: 50px; border-radius: 15px; transition: all 0.3s; cursor: pointer; }
+        .drop-zone:hover { border-color: #4ecdc4; background: rgba(255, 255, 255, 0.1); }
+        .track-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .track-list li { background: rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 20px; transition: all 0.3s; }
+        .track-list li:hover { transform: translateY(-5px); }
+        nav { text-align: center; margin: 20px; }
+        nav a { color: #4ecdc4; text-decoration: none; margin: 0 15px; }
+    </style>
+</head>
+<body>
+    <nav><a href="index.html">Inicio</a> | <a href="player.html">Reproductor</a> | <a href="links.html">Vincular</a></nav>
+    <h1>Gestión de Archivos Locales Mejorada</h1>
+    <div class="upload-section">
+        <h3>Cargar Música Local (Drag & Drop)</h3>
+        <div class="drop-zone" id="drop-zone">Arrastra archivos aquí o haz clic para seleccionar</div>
+        <input type="file" id="file-input" accept="audio/*" multiple style="display: none;">
+    </div>
+    <input type="text" class="search-bar" id="search-bar" placeholder="Buscar pistas...">
+    <ul class="track-list" id="track-list"></ul>
+    <script>
+        // Copia el JS de gestión de archivos aquí (IndexedDB, drag-and-drop, etc.)
+        let tracks = [];
+        const dbPromise = indexedDB.open('MusicDB', 1);
+        dbPromise.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            db.createObjectStore('tracks', { keyPath: 'id', autoIncrement: true });
+        };
+
+        function saveTrack(track) {
+            dbPromise.then(db => {
+                const tx = db.transaction('tracks', 'readwrite');
+                tx.objectStore('tracks').add(track);
+            });
+        }
+
+        function loadTracks() {
+            dbPromise.then(db => {
+                const tx = db.transaction('tracks', 'readonly');
+                const store = tx.objectStore('tracks');
+                store.getAll().then(results => {
+                    tracks = results;
+                    renderTracks();
+                });
+            });
+        }
+
+        function renderTracks() {
+            const list = document.getElementById('track-list');
+            list.innerHTML = '';
+            tracks.forEach(track => {
+                const li = document.createElement('li');
+                li.textContent = track.name;
+                li.onclick = () => playTrack(track.url);
+                list.appendChild(li);
+            });
+        }
+
+        document.getElementById('drop-zone').addEventListener('click', () => document.getElementById('file-input').click());
+        document.getElementById('file-input').addEventListener('change', handleFiles);
+        document.getElementById('drop-zone').addEventListener('dragover', e => e.preventDefault());
+        document.getElementById('drop-zone').addEventListener('drop', e => {
+            e.preventDefault();
+            handleFiles({ target: { files: e.dataTransfer.files } });
+        });
+
+        function handleFiles(event) {
+            Array.from(event.target.files).forEach(file => {
+                const url = URL.createObjectURL(file);
+                saveTrack({ name: file.name, url });
+            });
+            loadTracks();
+        }
+
+        loadTracks();
+    </script>
+</body>
+</html>
