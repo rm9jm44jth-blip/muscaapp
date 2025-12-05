@@ -5,30 +5,183 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reproductor Ultra Moderno - Música Pro</title>
     <style>
-        /* Copia el CSS del reproductor de la versión anterior aquí */
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #0f0f23, #1a1a2e); color: #fff; }
-        .custom-player { background: rgba(0, 0, 0, 0.9); backdrop-filter: blur(25px); border-radius: 25px; padding: 40px; margin: 50px auto; max-width: 900px; box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8); }
-        .progress-bar { width: 100%; height: 12px; background: rgba(255, 255, 255, 0.2); border-radius: 6px; cursor: pointer; margin: 25px 0; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #4ecdc4, #ff6b6b); border-radius: 6px; width: 0%; }
-        .controls { display: flex; justify-content: center; align-items: center; margin: 25px 0; }
-        .controls button { background: rgba(255, 255, 255, 0.15); border: none; color: #fff; font-size: 1.8em; margin: 0 12px; padding: 18px; border-radius: 50%; cursor: pointer; transition: all 0.4s; }
-        .controls button:hover { background: rgba(255, 255, 255, 0.4); transform: scale(1.15); }
-        .volume-slider { width: 220px; margin-left: 25px; -webkit-appearance: none; background: rgba(255, 255, 255, 0.2); height: 8px; border-radius: 4px; }
-        .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: #4ecdc4; border-radius: 50%; cursor: pointer; }
-        .eq-visualizer { display: flex; justify-content: center; margin: 25px 0; }
-        .eq-bar { width: 12px; height: 60px; background: linear-gradient(180deg, #4ecdc4, #ff6b6b); margin: 0 6px; border-radius: 6px; animation: eqPulse 1.5s infinite; }
-        @keyframes eqPulse { 0%, 100% { height: 20px; } 50% { height: 60px; } }
-        .wave-visualizer { margin: 20px 0; height: 100px; background: rgba(0, 0, 0, 0.5); border-radius: 10px; }
-        .wave-visualizer canvas { width: 100%; height: 100%; }
-        nav { text-align: center; margin: 20px; }
-        nav a { color: #4ecdc4; text-decoration: none; margin: 0 15px; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #0f0f23, #1a1a2e, #16213e, #0f3460);
+            background-attachment: fixed;
+            color: #fff;
+            overflow-x: hidden;
+            animation: liquidFlow 15s ease-in-out infinite, parallaxShift 20s linear infinite;
+        }
+        @keyframes liquidFlow {
+            0% { background-position: 0% 50%; filter: hue-rotate(0deg); }
+            50% { background-position: 100% 50%; filter: hue-rotate(180deg); }
+            100% { background-position: 0% 50%; filter: hue-rotate(360deg); }
+        }
+        @keyframes parallaxShift {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-10px); }
+        }
+        nav {
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+        }
+        nav a {
+            color: #4ecdc4;
+            text-decoration: none;
+            margin: 0 15px;
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+        nav a:hover {
+            color: #ff6b6b;
+        }
+        .custom-player {
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(25px);
+            border-radius: 25px;
+            padding: 40px;
+            margin: 50px auto;
+            max-width: 900px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        .custom-player::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(255, 255, 255, 0.1), transparent);
+            animation: glassRipple 4s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes glassRipple {
+            0% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 0.5; }
+        }
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 25px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ecdc4, #ff6b6b, #ffe66d);
+            border-radius: 6px;
+            width: 0%;
+            transition: width 0.1s;
+            animation: progressGlow 2s ease-in-out infinite;
+        }
+        @keyframes progressGlow {
+            0%, 100% { box-shadow: 0 0 10px #4ecdc4; }
+            50% { box-shadow: 0 0 20px #ff6b6b; }
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 25px 0;
+            flex-wrap: wrap;
+        }
+        .controls button {
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            color: #fff;
+            font-size: 1.8em;
+            margin: 0 12px;
+            padding: 18px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.4s;
+            backdrop-filter: blur(15px);
+            position: relative;
+        }
+        .controls button:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.15) rotate(5deg);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+        }
+        .volume-slider {
+            width: 220px;
+            margin-left: 25px;
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.2);
+            height: 8px;
+            border-radius: 4px;
+        }
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #4ecdc4;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .eq-visualizer {
+            display: flex;
+            justify-content: center;
+            margin: 25px 0;
+        }
+        .eq-bar {
+            width: 12px;
+            height: 60px;
+            background: linear-gradient(180deg, #4ecdc4, #ff6b6b);
+            margin: 0 6px;
+            border-radius: 6px;
+            animation: eqPulse 1.5s infinite ease-in-out;
+        }
+        @keyframes eqPulse {
+            0%, 100% { height: 20px; transform: scaleY(1); }
+            50% { height: 60px; transform: scaleY(1.2); }
+        }
+        .wave-visualizer {
+            margin: 20px 0;
+            height: 100px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        .wave-visualizer canvas {
+            width: 100%;
+            height: 100%;
+        }
+        @media (max-width: 768px) {
+            .custom-player {
+                padding: 20px;
+                margin: 20px;
+            }
+            .controls {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body>
-    <nav><a href="index.html">Inicio</a> | <a href="files.html">Archivos</a> | <a href="links.html">Vincular</a></nav>
+    <nav>
+        <a href="index.html">Inicio</a> |
+        <a href="files.html">Archivos</a> |
+        <a href="links.html">Vincular</a>
+    </nav>
     <div class="custom-player">
         <h2>Reproductor Ultra Moderno - Liquid Glass Dolby JBL</h2>
-        <div class="progress-bar" id="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        <div class="progress-bar" id="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
         <div class="controls">
             <button id="prev-btn">⏮</button>
             <button id="play-pause-btn">▶</button>
@@ -36,12 +189,17 @@
             <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.1" value="0.5">
         </div>
         <div class="eq-visualizer">
-            <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+            <div class="eq-bar"></div>
+            <div class="eq-bar"></div>
+            <div class="eq-bar"></div>
+            <div class="eq-bar"></div>
+            <div class="eq-bar"></div>
         </div>
-        <div class="wave-visualizer"><canvas id="wave-canvas"></canvas></div>
+        <div class="wave-visualizer">
+            <canvas id="wave-canvas"></canvas>
+        </div>
     </div>
     <script>
-        // Copia el JS del reproductor aquí (Web Audio API, controles, etc.)
         let audioContext, analyser, dataArray, source;
         const audio = new Audio();
         const canvas = document.getElementById('wave-canvas');
@@ -50,43 +208,76 @@
         canvas.height = canvas.offsetHeight;
 
         function initAudio() {
-            audioContext = new AudioContext();
-            analyser = audioContext.createAnalyser();
-            analyser.fftSize = 256;
-            dataArray = new Uint8Array(analyser.frequencyBinCount);
-            source = audioContext.createMediaElementSource(audio);
-            source.connect(analyser);
-            analyser.connect(audioContext.destination);
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                source = audioContext.createMediaElementSource(audio);
+                source.connect(analyser);
+                analyser.connect(audioContext.destination);
+
+                // Filtros Dolby/JBL
+                const lowPass = audioContext.createBiquadFilter();
+                lowPass.type = 'lowpass';
+                lowPass.frequency.value = 2000;
+                const highPass = audioContext.createBiquadFilter();
+                highPass.type = 'highpass';
+                highPass.frequency.value = 100;
+                source.connect(lowPass);
+                lowPass.connect(highPass);
+                highPass.connect(analyser);
+            }
         }
 
         function drawWave() {
-            requestAnimationFrame(drawWave);
-            analyser.getByteTimeDomainData(dataArray);
-            ctx.fillStyle = 'rgba(0,0,0,0.1)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = '#4ecdc4';
-            ctx.beginPath();
-            const sliceWidth = canvas.width / analyser.frequencyBinCount;
-            let x = 0;
-            for (let i = 0; i < analyser.frequencyBinCount; i++) {
-                const v = dataArray[i] / 128.0;
-                const y = v * canvas.height / 2;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-                x += sliceWidth;
+            if (analyser) {
+                requestAnimationFrame(drawWave);
+                analyser.getByteTimeDomainData(dataArray);
+                ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#4ecdc4';
+                ctx.beginPath();
+                const sliceWidth = canvas.width / analyser.frequencyBinCount;
+                let x = 0;
+                for (let i = 0; i < analyser.frequencyBinCount; i++) {
+                    const v = dataArray[i] / 128.0;
+                    const y = v * canvas.height / 2;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                    x += sliceWidth;
+                }
+                ctx.stroke();
             }
-            ctx.stroke();
         }
 
         document.getElementById('play-pause-btn').addEventListener('click', () => {
             if (audio.paused) {
+                audio.src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav'; // Ejemplo; reemplaza con pista real
                 audio.play();
                 initAudio();
                 drawWave();
-            } else audio.pause();
+            } else {
+                audio.pause();
+            }
         });
-        // Agrega más controles JS aquí
+
+        document.getElementById('volume-slider').addEventListener('input', (e) => {
+            audio.volume = e.target.value;
+        });
+
+        audio.addEventListener('timeupdate', () => {
+            const progress = (audio.currentTime / audio.duration) * 100;
+            document.getElementById('progress-fill').style.width = progress + '%';
+        });
+
+        document.getElementById('progress-bar').addEventListener('click', (e) => {
+            const rect = e.target.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const percentage = clickX / rect.width;
+            audio.currentTime = percentage * audio.duration;
+        });
     </script>
 </body>
 </html>
